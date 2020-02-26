@@ -3,7 +3,7 @@
 #include <vector>
 #include <algorithm>
 
-const int ScreenX = 800;			// スクリーンXサイズ
+const int ScreenX = 600;			// スクリーンXサイズ
 const int ScreenY = 600;			// スクリーンYサイズ
 const float tileSize = 25;			// 床のタイルサイズ
 const float RayMaxDistance = 3000;	// レイの最長距離
@@ -224,10 +224,10 @@ bool isHitSphere(float3& retCol, float3& hitPos, float3& normal, const float3& e
 
 		// ライトの反射ベクトルと視線の逆ベクトルから鏡面反射の強さを計算
 		float specular = Dot(refVec, reRay);
-		specular = pow(specular,30);
+		specular = pow(specular,20);
 				
 		// ボールの色を入魂
-		retCol = sph.albedo*shadow;
+		retCol = sph.albedo *shadow;
 		if (shadow > 0)
 		{
 			retCol += specular;// 鏡面反射色を加算
@@ -302,16 +302,33 @@ void RayTracing(const float3& eye,float3& light, const std::vector<Sphere>& sph,
 			// 床との当たり
 			for (auto& p : plane)
 			{
-				if (isHitPlane(color, hitPos, normal, eye, ray, light, p))
+				float3 checkPos = eye;
+				float3 tmpCol = float3();
+				if (isHitPlane(tmpCol, checkPos, normal, eye, ray, light, p))
 				{
+					hitPos = checkPos;
+					color = tmpCol;
+					/*if (checkPos.z <= hitPos.z)
+					{
+					}
+					else
+					{
+						continue;
+					}*/
 					isHit = true;
+					
 					// 影の描画
 					for (auto& s : sph)
 					{
 						auto c = float3(0, 0, 0);
-						auto p = float3(0, 0, 0);
+						auto po = float3(0, 0, 0);
+
+						if (isHitSphere(c, po, normal, hitPos, Reflect(ray,p.normal), light, s))
+						{
+							color = color * c;
+						}
 						// 当たり判定の取得
-						if (isHitSphere(c, p, normal, hitPos, -light, light, s))
+						if (isHitSphere(c, po, normal, hitPos, -light, light, s))
 						{
 							color *= 0.5;
 							break;
@@ -356,6 +373,18 @@ void RayTracing(const float3& eye,float3& light, const std::vector<Sphere>& sph,
 						{
 							if (isHitSphere(addCol, hp, n, hitPos, RefVec, light, rs))
 							{
+								float3 hp2;
+								float3 n2;
+								auto RefVec2 = Reflect(RefVec, n);// 視線の反射ベクトル
+								auto addCol2 = float3(0, 0, 0);// 加算する色を入れる変数
+								// 床との当たり
+								for (auto& p : plane)
+								{
+									if (isHitPlane(addCol2, hp2, n2, hp, RefVec2, light, p))
+									{
+										addCol = addCol * addCol2;
+									}
+								}
 								color = color * addCol;
 							}
 						}
@@ -389,7 +418,7 @@ int WINAPI WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance,LPSTR lpCmdLine,
 	float3 light = float3(-1,2,2);
 	light.Normalize();
 	// 視点
-	float3 eye(0,50,500);
+	float3 eye(0,0,500);
 
 	// 球体の配列
 	std::vector<Sphere> spheres = {
